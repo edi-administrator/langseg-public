@@ -41,11 +41,18 @@ def image_preprocess(img: Image, transform: Callable, device: str = "cuda:0") ->
     bridge =  cv_bridge.CvBridge()
     valid = False
     batch = None
-    imgs = [img]
+    encodings = {
+        "bayer_rggb8": "bgr8",
+    }
     try:
-        if len(imgs) > 0:
-            batch = torch.stack([transform(bridge.imgmsg_to_cv2(img)) for img in imgs]).to(device)
-            valid = True
+        if img.encoding in encodings:
+            encoding = encodings[img.encoding]
+        else:
+            encoding = "passthrough"
+        img_mat = bridge.imgmsg_to_cv2(img, desired_encoding=encoding)
+        torch_img = transform(img_mat).to(device)
+        batch = torch.unsqueeze(torch_img, 0)
+        valid = True
     except Exception as e:
         print(str(e))
     return batch, valid
